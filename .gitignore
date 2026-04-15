@@ -1,0 +1,69 @@
+# ---------------- Datasets (large, do not commit) ----------------
+datasets/
+data/
+
+# ---------------- Generated artifacts ----------------
+logs/
+evaluation/results/
+evaluation/final_report.txt
+visualization/
+configs/features_baseline.json
+configs/features_dctm.json
+configs/shap_scores.json
+
+# ---------------- Python ----------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+build/
+dist/
+*.egg
+pip-wheel-metadata/
+
+# ---------------- Virtual environments ----------------
+.venv/
+venv/
+env/
+ENV/
+.env
+.envrc
+
+# ---------------- Model / data files ----------------
+*.pkl
+*.pt
+*.pth
+*.ckpt
+*.h5
+*.onnx
+*.parquet
+*.feather
+*.npy
+*.npz
+
+# ---------------- Notebooks ----------------
+.ipynb_checkpoints/
+*.ipynb
+
+# ---------------- IDE / editor ----------------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ---------------- OS ----------------
+desktop.ini
+
+# ---------------- Testing / coverage ----------------
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.ruff_cache/

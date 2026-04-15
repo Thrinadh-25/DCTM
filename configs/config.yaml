@@ -1,0 +1,116 @@
+# DCTM – Central configuration
+# Paths are relative to project root (c:/Users/Thrinadh reddy/DCTM)
+
+project:
+  root: "."
+  seed: 42
+
+paths:
+  datasets:
+    cicids2017: "datasets/cicids 2017"
+    cicids2018: "datasets/cicids2018csv"
+  processed: "data/processed"
+  splits: "data/splits"
+  models: "data/models"
+  adversarial: "data/adversarial"
+  scaler: "data/scaler.pkl"
+  logs: "logs/run.log"
+  results: "evaluation/results"
+  visualization: "visualization"
+  configs: "configs"
+
+preprocessing:
+  test_size: 0.2
+  random_state: 42
+  # For large datasets, optionally subsample before heavy ops (0 = no subsample)
+  max_rows_per_file: 0
+  drop_inf: true
+  drop_nan: true
+  drop_duplicates: true
+
+smote:
+  k_neighbors: 5
+  random_state: 42
+  # If any class has < min_samples, it will be skipped for SMOTE
+  min_samples: 6
+
+feature_engineering:
+  baseline_top_k: 10
+  dctm_top_k: 20
+  mi_sample_size: 100000   # subsample to speed MI computation
+  shap_sample_size: 50000  # subsample for SHAP background
+  lgbm:
+    n_estimators: 200
+    learning_rate: 0.05
+    num_leaves: 63
+    random_state: 42
+
+diffusion:
+  timesteps: 1000
+  beta_schedule: "linear"    # linear | cosine
+  beta_start: 0.0001
+  beta_end: 0.02
+  cosine_s: 0.008
+  model_dim: 256
+  time_embed_dim: 128
+  nhead: 4
+  num_layers: 4
+  dim_feedforward: 512
+  dropout: 0.1
+  epochs: 100
+  batch_size: 256
+  lr: 0.0001
+  weight_decay: 0.0001
+  grad_clip: 1.0
+  partial_t_fraction: 0.5
+  adv_samples_per_class: 5000
+
+classical:
+  decision_tree:
+    max_depth: 10
+    random_state: 42
+  naive_bayes: {}
+  logistic_regression:
+    max_iter: 1000
+    C: 1.0
+    random_state: 42
+  random_forest:
+    n_estimators: 100
+    n_jobs: -1
+    random_state: 42
+  xgboost:
+    n_estimators: 100
+    eval_metric: "logloss"
+    random_state: 42
+    tree_method: "hist"
+  svm:
+    kernel: "rbf"
+    probability: true
+    random_state: 42
+    # SVM can be slow on huge data – subsample the training set
+    max_train_samples: 50000
+
+deep_learning:
+  epochs: 30
+  batch_size: 512
+  lr: 0.001
+  weight_decay: 0.0001
+  patience: 10
+  mlp:
+    hidden: [256, 128, 64]
+    dropout: 0.3
+  cnn:
+    channels: [32, 64]
+    kernel_size: 3
+    dropout: 0.3
+  rnn:
+    hidden_size: 128
+    num_layers: 2
+    dropout: 0.3
+  cnn_bilstm:
+    cnn_channels: 32
+    lstm_hidden: 64
+    dropout: 0.3
+
+evaluation:
+  demgan_reference_er: 0.9742
