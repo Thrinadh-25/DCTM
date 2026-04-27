@@ -66,6 +66,9 @@ def compute_shap(
         abs_vals = np.mean([np.abs(s).mean(axis=0) for s in sv], axis=0)
     else:
         abs_vals = np.abs(sv).mean(axis=0)
+    # newer SHAP may return (samples, features, classes) -> collapse to 1D
+    if abs_vals.ndim > 1:
+        abs_vals = abs_vals.mean(axis=-1)
 
     ranked = sorted(zip(feature_names, abs_vals.tolist()), key=lambda t: t[1], reverse=True)
     result = {"ranked": [{"feature": n, "shap": s} for n, s in ranked]}
