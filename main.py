@@ -164,6 +164,7 @@ def phase_train(cfg: dict, dataset: str = "cicids2017", feature_set: str = "both
             k_neighbors=cfg["smote"]["k_neighbors"],
             random_state=cfg["smote"]["random_state"],
             min_samples=cfg["smote"]["min_samples"],
+            max_samples_per_class=cfg["smote"].get("max_samples_per_class", 0),
             plot_path=os.path.join(cfg["paths"]["visualization"], f"class_distribution_{fs}.png"),
         )
 
@@ -269,6 +270,7 @@ def phase_retrain(cfg: dict, dataset: str = "cicids2017", feature_set: str = "dc
         k_neighbors=cfg["smote"]["k_neighbors"],
         random_state=cfg["smote"]["random_state"],
         min_samples=cfg["smote"]["min_samples"],
+        max_samples_per_class=cfg["smote"].get("max_samples_per_class", 0),
         plot_path=None,
     )
 

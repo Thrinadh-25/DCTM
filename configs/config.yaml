@@ -33,6 +33,8 @@ smote:
   random_state: 42
   # If any class has < min_samples, it will be skipped for SMOTE
   min_samples: 6
+  # Cap per-class samples before SMOTE to avoid RAM blowup on large datasets
+  max_samples_per_class: 200000
 
 feature_engineering:
   baseline_top_k: 10

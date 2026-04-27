@@ -19,6 +19,7 @@ def apply_smote(
     k_neighbors: int = 5,
     random_state: int = 42,
     min_samples: int = 6,
+    max_samples_per_class: int = 0,
     plot_path: str | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """SMOTE on minority classes; classes with < min_samples are skipped.
@@ -36,6 +37,18 @@ def apply_smote(
 
     mask = np.isin(y, valid_classes)
     X_v, y_v = X[mask], y[mask]
+
+    # Cap each class to avoid blowing up RAM on large majority classes
+    if max_samples_per_class and max_samples_per_class > 0:
+        rng = np.random.default_rng(random_state)
+        idx_keep = []
+        for c in np.unique(y_v):
+            idx_c = np.where(y_v == c)[0]
+            if len(idx_c) > max_samples_per_class:
+                idx_c = rng.choice(idx_c, size=max_samples_per_class, replace=False)
+            idx_keep.append(idx_c)
+        idx_keep = np.concatenate(idx_keep)
+        X_v, y_v = X_v[idx_keep], y_v[idx_keep]
 
     k = min(k_neighbors, int(min(Counter(y_v.tolist()).values())) - 1)
     k = max(k, 1)
