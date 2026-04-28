@@ -72,16 +72,27 @@ def train_all_models(
 
     for name in names:
         try:
-            t0 = time.time()
             is_deep = name in DEEP_MODELS
-            if is_deep:
-                model = _deep_ctor(name, input_dim, num_classes, deep_cfg)
-            else:
-                model = _classical_ctor(name, classical_cfg)
+            path = _model_path(models_dir, name, feature_set, is_deep)
 
-            _log.info(f"=== Training [{name}] ({feature_set}) ===")
-            model.train(X_train, y_train)
-            train_time = time.time() - t0
+            if os.path.exists(path):
+                _log.info(f"=== Skipping [{name}] ({feature_set}) — checkpoint exists at {path} ===")
+                if is_deep:
+                    Cls = DEEP_MODELS[name]
+                    model = Cls.load(path)
+                else:
+                    Cls = CLASSICAL_MODELS[name]
+                    model = Cls.load(path)
+                train_time = 0.0
+            else:
+                t0 = time.time()
+                if is_deep:
+                    model = _deep_ctor(name, input_dim, num_classes, deep_cfg)
+                else:
+                    model = _classical_ctor(name, classical_cfg)
+                _log.info(f"=== Training [{name}] ({feature_set}) ===")
+                model.train(X_train, y_train)
+                train_time = time.time() - t0
 
             y_pred = model.predict(X_test)
             try:
@@ -91,8 +102,8 @@ def train_all_models(
 
             metrics = compute_metrics(y_test, y_pred, y_proba)
             metrics["train_time_sec"] = round(train_time, 2)
-            path = _model_path(models_dir, name, feature_set, is_deep)
-            model.save(path)
+            if train_time > 0:
+                model.save(path)
             results[name] = {"metrics": metrics, "path": path}
 
             plot_confusion_matrix(

@@ -33,8 +33,9 @@ smote:
   random_state: 42
   # If any class has < min_samples, it will be skipped for SMOTE
   min_samples: 6
-  # Cap per-class samples before SMOTE to avoid RAM blowup on large datasets
-  max_samples_per_class: 200000
+  # Cap per-class samples before SMOTE to avoid RAM blowup on large datasets.
+  # 50k × 15 classes = 750k rows, fits CPU sklearn classifiers in a few minutes.
+  max_samples_per_class: 50000
 
 feature_engineering:
   baseline_top_k: 10
@@ -69,22 +70,39 @@ diffusion:
 
 classical:
   decision_tree:
-    max_depth: 10
+    max_depth: 25
+    min_samples_split: 20
+    min_samples_leaf: 10
+    class_weight: "balanced"
     random_state: 42
-  naive_bayes: {}
+  naive_bayes:
+    var_smoothing: 0.00000001
   logistic_regression:
-    max_iter: 1000
+    solver: "saga"
+    max_iter: 300
+    n_jobs: -1
+    class_weight: "balanced"
     C: 1.0
     random_state: 42
+    # Subsample only this classifier (saga still scales to ~500k cleanly)
+    max_train_samples: 300000
   random_forest:
-    n_estimators: 100
+    n_estimators: 200
+    max_depth: 25
+    min_samples_leaf: 5
     n_jobs: -1
+    class_weight: "balanced_subsample"
     random_state: 42
   xgboost:
-    n_estimators: 100
-    eval_metric: "logloss"
-    random_state: 42
+    n_estimators: 200
+    max_depth: 8
+    learning_rate: 0.1
+    subsample: 0.8
+    colsample_bytree: 0.8
+    objective: "multi:softprob"
+    eval_metric: "mlogloss"
     tree_method: "hist"
+    random_state: 42
   svm:
     kernel: "rbf"
     probability: true
