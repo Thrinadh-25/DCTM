@@ -4,6 +4,166 @@
 
 ---
 
+## Full Project Tree
+
+```
+DCTM/
+│
+├── main.py                                          ← single entry point, runs all phases
+├── configs/
+│   └── config.yaml                                  ← all hyperparameters
+├── requirements.txt                                 ← pip dependencies
+├── RUNNING_INSTRUCTIONS.md                          ← setup & run guide
+├── CLAUDE.md                                        ← Claude Code instructions
+├── implementation_plan.md                           ← original design plan
+├── LICENSE
+│
+├── preprocessing/                                   ← Phase 1
+│   ├── __init__.py
+│   ├── data_loader.py                               ← reads & merges all CSVs
+│   ├── normalizer.py                                ← StandardScaler
+│   ├── splitter.py                                  ← stratified train/test split
+│   └── smote_handler.py                             ← SMOTE oversampling (train only)
+│
+├── feature_engineering/                             ← Phase 2
+│   ├── __init__.py
+│   ├── mutual_information.py                        ← MI scores → top 10 features
+│   ├── shap_analysis.py                             ← LightGBM proxy → SHAP scores
+│   ├── hybrid_selector.py                           ← 0.5×MI + 0.5×SHAP → top 20 features
+│   └── feature_constraints.py                       ← immutable features list
+│
+├── models/                                          ← Phase 3
+│   ├── __init__.py
+│   ├── trainer.py                                   ← loops all 10 models, skips existing
+│   ├── classical/                                   ← CPU / sklearn
+│   │   ├── __init__.py
+│   │   ├── _base.py                                 ← shared pickle save/load
+│   │   ├── decision_tree.py
+│   │   ├── naive_bayes.py
+│   │   ├── logistic_regression.py
+│   │   ├── random_forest.py
+│   │   ├── xgboost_model.py                         ← GPU via device=cuda
+│   │   └── svm_model.py                             ← slowest, capped at 50k samples
+│   └── deep_learning/                               ← GPU / PyTorch
+│       ├── __init__.py
+│       ├── base_model.py                            ← shared train loop, .pt save/load
+│       ├── mlp.py                                   ← 3-layer fully connected
+│       ├── cnn.py                                   ← 1D convolutions
+│       ├── rnn.py                                   ← Bidirectional LSTM
+│       └── cnn_bilstm.py                            ← CNN → BiLSTM
+│
+├── diffusion/                                       ← Phase 4 (core contribution)
+│   ├── __init__.py
+│   ├── noise_schedule.py                            ← beta schedule, precomputes α, ᾱ
+│   ├── forward_process.py                           ← q_sample(): adds noise at timestep t
+│   ├── denoiser.py                                  ← TransformerDenoiser neural network
+│   ├── reverse_process.py                           ← p_sample_loop(): iterative denoising
+│   ├── trainer.py                                   ← trains one model per attack class
+│   └── adversarial_generator.py                     ← partial diffusion → clamp → denoise
+│
+├── evaluation/                                      ← Phases 5–9
+│   ├── __init__.py
+│   ├── metrics.py                                   ← accuracy, F1, precision, recall
+│   ├── evasion_evaluator.py                         ← clean vs adversarial, computes ER
+│   ├── retraining.py                                ← retrain IDS on augmented data
+│   └── report_generator.py                          ← writes final_report.txt
+│
+├── utils/                                           ← shared helpers
+│   ├── __init__.py
+│   ├── logger.py                                    ← Python logging setup
+│   ├── seed.py                                      ← set_seed(42) for reproducibility
+│   ├── device.py                                    ← returns cuda or cpu
+│   └── io.py                                        ← parquet + JSON load/save wrappers
+│
+├── datasets/                                        ← raw input (you provide these)
+│   ├── cicids 2017/                                 ← 8 daily CSV files
+│   │   ├── Monday-WorkingHours.pcap_ISCX.csv
+│   │   ├── Tuesday-WorkingHours.pcap_ISCX.csv
+│   │   ├── Wednesday-workingHours.pcap_ISCX.csv
+│   │   ├── Thursday-WorkingHours-Morning-WebAttacks.pcap_ISCX.csv
+│   │   ├── Thursday-WorkingHours-Afternoon-Infilteration.pcap_ISCX.csv
+│   │   ├── Friday-WorkingHours-Morning.pcap_ISCX.csv
+│   │   ├── Friday-WorkingHours-Afternoon-DDos.pcap_ISCX.csv
+│   │   └── Friday-WorkingHours-Afternoon-PortScan.pcap_ISCX.csv
+│   ├── cicids 2018 full/                            ← full 2018 raw CSVs
+│   │   └── Processed Traffic Data for ML Algorithms/
+│   │       ├── Wednesday-14-02-2018_TrafficForML_CICFlowMeter.csv
+│   │       ├── Thursday-15-02-2018_TrafficForML_CICFlowMeter.csv
+│   │       ├── Friday-16-02-2018_TrafficForML_CICFlowMeter.csv
+│   │       ├── Thuesday-20-02-2018_TrafficForML_CICFlowMeter.csv
+│   │       ├── Wednesday-21-02-2018_TrafficForML_CICFlowMeter.csv
+│   │       ├── Thursday-22-02-2018_TrafficForML_CICFlowMeter.csv
+│   │       ├── Friday-23-02-2018_TrafficForML_CICFlowMeter.csv
+│   │       ├── Wednesday-28-02-2018_TrafficForML_CICFlowMeter.csv
+│   │       ├── Thursday-01-03-2018_TrafficForML_CICFlowMeter.csv
+│   │       └── Friday-02-03-2018_TrafficForML_CICFlowMeter.csv
+│   ├── cicids2018csv/                               ← subset of 2018 CSVs
+│   │   ├── Wednesday-14-02-2018_TrafficForML_CICFlowMeter.csv
+│   │   ├── Thursday-15-02-2018_TrafficForML_CICFlowMeter.csv
+│   │   └── Thursday-22-02-2018_TrafficForML_CICFlowMeter.csv
+│   └── cicids2018/                                  ← pre-converted parquet files
+│       ├── Botnet-Friday-02-03-2018_TrafficForML_CICFlowMeter.parquet
+│       ├── Bruteforce-Wednesday-14-02-2018_TrafficForML_CICFlowMeter.parquet
+│       ├── DDoS1-Tuesday-20-02-2018_TrafficForML_CICFlowMeter.parquet
+│       ├── DDoS2-Wednesday-21-02-2018_TrafficForML_CICFlowMeter.parquet
+│       ├── DoS1-Thursday-15-02-2018_TrafficForML_CICFlowMeter.parquet
+│       ├── DoS2-Friday-16-02-2018_TrafficForML_CICFlowMeter.parquet
+│       ├── Infil1-Wednesday-28-02-2018_TrafficForML_CICFlowMeter.parquet
+│       ├── Infil2-Thursday-01-03-2018_TrafficForML_CICFlowMeter.parquet
+│       ├── Web1-Thursday-22-02-2018_TrafficForML_CICFlowMeter.parquet
+│       └── Web2-Friday-23-02-2018_TrafficForML_CICFlowMeter.parquet
+│
+├── data/                                            ← generated artifacts (not in git)
+│   ├── processed/                                   ← cleaned parquet after preprocess
+│   ├── splits/                                      ← train/test split parquet files
+│   ├── models/
+│   │   ├── decision_tree_baseline.pkl
+│   │   ├── decision_tree_dctm.pkl
+│   │   ├── naive_bayes_baseline.pkl / _dctm.pkl
+│   │   ├── logistic_regression_baseline.pkl / _dctm.pkl
+│   │   ├── random_forest_baseline.pkl / _dctm.pkl
+│   │   ├── xgboost_baseline.pkl / _dctm.pkl
+│   │   ├── svm_baseline.pkl / _dctm.pkl
+│   │   ├── mlp_baseline.pt / _dctm.pt
+│   │   ├── cnn_baseline.pt / _dctm.pt
+│   │   ├── rnn_baseline.pt / _dctm.pt
+│   │   ├── cnn_bilstm_baseline.pt / _dctm.pt
+│   │   └── diffusion_dctm_class{i}.pt               ← one per attack class
+│   └── adversarial/
+│       └── adv_samples_class{i}.parquet
+│
+├── evaluation/
+│   └── results/
+│       ├── evasion_*.csv                            ← per-model evasion results
+│       ├── retrained_*.csv                          ← post-retraining results
+│       └── final_report.txt                         ← human-readable summary
+│
+└── review 2/                                        ← this folder
+    ├── PROJECT_STRUCTURE.md                         ← this file
+    ├── documents/
+    │   ├── ARCH_OVERVIEW.md
+    │   └── PROJECT_A_TO_Z.md
+    ├── ppt main/
+    │   ├── review 2 c6 dctm.pptx                   ← main presentation
+    │   ├── arch(main).pdf                           ← architecture diagram
+    │   ├── DCTM abs.pdf                             ← project abstract
+    │   ├── TSP_CMC_64833 (1).pdf                    ← DEMGAN base paper
+    │   └── DIAGRAMS.md
+    └── mics/
+        ├── CSE-C-06.pptx                            ← college PPT template
+        ├── MiniProj-PPT-Instructions.pptx
+        ├── ARCHITECTURE.md
+        ├── IMPLEMENTATION.md
+        ├── PRESENTATION_SCRIPT.md
+        ├── SLIDE_CONTENT_GUIDE.md
+        ├── SLIDE_NOTES.md
+        └── CLAUDE_DESIGN_PPT.md
+```
+
+---
+
+---
+
 ## Root Level
 
 ```
