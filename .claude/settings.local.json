@@ -5,7 +5,12 @@
       "Bash(.venv/Scripts/pip install *)",
       "Bash(.venv/Scripts/python -c ' *)",
       "Bash(pip install *)",
-      "Bash(python *)"
+      "Bash(python *)",
+      "Bash(mkdir -p \"ppt main\" \"documents\" \"mics\")",
+      "Bash(mv \"CSE-C-06.pptx\" \"ppt main/\")",
+      "Bash(mv \"MiniProj-PPT-Instructions.pptx\" \"ppt main/\")",
+      "Bash(mv \"CLAUDE_DESIGN_PPT.md\" \"ppt main/\")",
+      "Bash(mv \"SLIDE_CONTENT_GUIDE.md\" \"ppt main/\")"
     ]
   }
 }
