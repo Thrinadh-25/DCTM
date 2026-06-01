@@ -13,6 +13,7 @@ from pathlib import Path
 import numpy as np
 import torch
 from torch.utils.data import DataLoader, TensorDataset
+from tqdm import tqdm
 
 from utils.device import get_device, is_cuda
 from utils.logger import get_logger
@@ -70,7 +71,8 @@ def _train_one_class(
 
     _log.info(f"Training diffusion for class {cls_id}: n={len(X_t)}, T={schedule.T}, device={device}")
     model.train()
-    for ep in range(1, epochs + 1):
+    epoch_bar = tqdm(range(1, epochs + 1), desc=f"  Class {cls_id}", unit="ep", ncols=90, leave=True)
+    for ep in epoch_bar:
         t0 = time.time()
         total = 0.0
         count = 0
@@ -89,7 +91,9 @@ def _train_one_class(
             count += xb.size(0)
         scheduler.step()
         avg = total / max(1, count)
-        _log.info(f"  class={cls_id} epoch {ep:03d}/{epochs}  loss={avg:.5f}  elapsed={time.time()-t0:.1f}s")
+        elapsed = time.time() - t0
+        epoch_bar.set_postfix(loss=f"{avg:.5f}", s=f"{elapsed:.1f}")
+        _log.info(f"  class={cls_id} epoch {ep:03d}/{epochs}  loss={avg:.5f}  elapsed={elapsed:.1f}s")
 
     ckpt = {
         "state_dict": model.state_dict(),
@@ -117,10 +121,9 @@ def train_diffusion(
 
     ckpts = {}
     classes = sorted(np.unique(y_train).tolist())
-    for c in classes:
-        # By default, skip benign (class 0 in binary labeling)
-        if not include_benign and c == 0:
-            continue
+    attack_classes = [c for c in classes if include_benign or c != 0]
+    print(f"\n[Diffusion] Training {len(attack_classes)} class model(s) on {device}")
+    for c in tqdm(attack_classes, desc="Diffusion classes", unit="class", ncols=90):
         mask = y_train == c
         X_cls = X_train[mask]
         if len(X_cls) < min_samples_per_class:

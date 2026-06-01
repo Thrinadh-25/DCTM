@@ -19,6 +19,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import torch
+from tqdm import tqdm
 
 from utils.device import get_device
 from utils.logger import get_logger
@@ -29,6 +30,71 @@ from .reverse_process import p_sample_loop
 from .trainer import load_diffusion
 
 _log = get_logger("adv_gen")
+
+
+def _load_guidance_models(cfg: dict, feature_set: str) -> list:
+    """Load fast classical IDS models to use as gradient-guidance surrogates."""
+    from models.classical import CLASSICAL_MODELS
+    fast = {"decision_tree", "logistic_regression", "naive_bayes"}
+    models_dir = cfg["paths"]["models"]
+    loaded = []
+    for name in fast:
+        if name not in CLASSICAL_MODELS:
+            continue
+        path = os.path.join(models_dir, f"{name}_{feature_set}.pkl")
+        if not os.path.exists(path):
+            continue
+        try:
+            loaded.append(CLASSICAL_MODELS[name].load(path))
+            _log.info(f"Guidance surrogate loaded: {name}")
+        except Exception as e:
+            _log.warning(f"Could not load {name} for guidance: {e}")
+    return loaded
+
+
+def _pgd_refine(
+    X_adv: np.ndarray,
+    X_orig: np.ndarray,
+    immutable_idx: list[int],
+    surrogate_models: list,
+    n_steps: int = 10,
+    lr: float = 0.05,
+    eps_fd: float = 1e-3,
+    benign_label: int = 0,
+) -> np.ndarray:
+    """Constraint-aware PGD: nudge adversarial samples toward P(benign) via ensemble
+    numerical gradients, clamping immutable features to original values every step."""
+    if not surrogate_models:
+        _log.warning("No guidance models found — skipping PGD refinement")
+        return X_adv
+
+    n_samples, n_feat = X_adv.shape
+    mutable = [j for j in range(n_feat) if j not in immutable_idx]
+    X = X_adv.copy()
+
+    for step in tqdm(range(n_steps), desc="  PGD refine", unit="step", ncols=90, leave=False):
+        grad = np.zeros_like(X)
+        for j in mutable:
+            X_plus = X.copy()
+            X_minus = X.copy()
+            X_plus[:, j] = np.clip(X[:, j] + eps_fd, 0.0, 1.0)
+            X_minus[:, j] = np.clip(X[:, j] - eps_fd, 0.0, 1.0)
+            g = np.zeros(n_samples)
+            for mdl in surrogate_models:
+                try:
+                    g += mdl.predict_proba(X_plus)[:, benign_label]
+                    g -= mdl.predict_proba(X_minus)[:, benign_label]
+                except Exception:
+                    pass
+            grad[:, j] = g / (2.0 * eps_fd * max(len(surrogate_models), 1))
+
+        X = X + lr * grad
+        X = np.clip(X, 0.0, 1.0)
+        if immutable_idx:
+            X[:, immutable_idx] = X_orig[:, immutable_idx]
+
+    _log.info(f"PGD refinement done: {n_steps} steps, {len(surrogate_models)} surrogate models")
+    return X.astype(np.float32)
 
 
 def _build_constrain_fn(x0_orig: torch.Tensor, immutable_idx: list[int]):
@@ -79,9 +145,11 @@ def generate_adversarial_samples(
     partial_frac = cfg_d.get("partial_t_fraction", 0.5)
 
     all_adv = []
+    all_orig = []   # original seed values — used to re-clamp immutables during PGD
     all_labels = []
 
-    for cls_id, ckpt_path in diffusion_checkpoints.items():
+    print(f"\n[Attack] Generating adversarial samples for {len(diffusion_checkpoints)} class(es)")
+    for cls_id, ckpt_path in tqdm(diffusion_checkpoints.items(), desc="Classes", unit="class", ncols=90):
         cls_id = int(cls_id)
         mask = y_test == cls_id
         X_cls = X_test[mask]
@@ -145,6 +213,7 @@ def generate_adversarial_samples(
 
         _log_drift(X_seed, adv, feature_names)
         all_adv.append(adv)
+        all_orig.append(X_seed)
         all_labels.append(np.full(len(adv), cls_id, dtype=np.int32))
 
     if not all_adv:
@@ -152,7 +221,23 @@ def generate_adversarial_samples(
         return pd.DataFrame(columns=feature_names + ["y_multiclass"])
 
     X_adv = np.concatenate(all_adv, axis=0)
+    X_orig_all = np.concatenate(all_orig, axis=0)
     y_adv = np.concatenate(all_labels, axis=0)
+
+    # PGD refinement: nudge samples toward benign class using trained IDS models as surrogates
+    cfg_d = cfg["diffusion"]
+    n_steps = cfg_d.get("guidance_steps", 10)
+    if n_steps > 0:
+        surrogate_models = _load_guidance_models(cfg, feature_set)
+        X_adv = _pgd_refine(
+            X_adv,
+            X_orig_all,
+            immutable_idx,
+            surrogate_models,
+            n_steps=n_steps,
+            lr=cfg_d.get("guidance_lr", 0.05),
+        )
+
     df = pd.DataFrame(X_adv, columns=feature_names)
     df["y_multiclass"] = y_adv
 

@@ -15,6 +15,7 @@ import numpy as np
 import torch
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
+from tqdm import tqdm
 
 from utils.device import get_device, is_cuda
 from utils.logger import get_logger
@@ -84,7 +85,8 @@ class DeepIDSBase:
         patience_left = self.patience
         _log.info(f"[{self.name}] training on {self.device} — epochs={self.epochs}, n_train={len(X_tr)}")
 
-        for ep in range(1, self.epochs + 1):
+        epoch_bar = tqdm(range(1, self.epochs + 1), desc=f"  {self.name}", unit="ep", ncols=90, leave=True)
+        for ep in epoch_bar:
             self.model.train()
             total = 0.0
             n_samples = 0
@@ -102,8 +104,15 @@ class DeepIDSBase:
             train_loss = total / max(1, n_samples)
             val_loss = self._eval_loss(X_val, y_val)
 
+            improved = val_loss < best_val - 1e-5
+            epoch_bar.set_postfix(
+                train=f"{train_loss:.4f}",
+                val=f"{val_loss:.4f}",
+                patience=patience_left,
+                best="✓" if improved else "",
+            )
             _log.info(f"[{self.name}] epoch {ep:03d}  train={train_loss:.4f}  val={val_loss:.4f}")
-            if val_loss < best_val - 1e-5:
+            if improved:
                 best_val = val_loss
                 best_state = copy.deepcopy(self.model.state_dict())
                 patience_left = self.patience
@@ -111,6 +120,7 @@ class DeepIDSBase:
                 patience_left -= 1
                 if patience_left <= 0:
                     _log.info(f"[{self.name}] early-stop at epoch {ep}")
+                    epoch_bar.set_postfix(train=f"{train_loss:.4f}", val=f"{val_loss:.4f}", status="EARLY STOP")
                     break
         if best_state is not None:
             self.model.load_state_dict(best_state)

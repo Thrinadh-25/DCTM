@@ -6,6 +6,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
 from models.classical import CLASSICAL_MODELS
 from models.deep_learning import DEEP_MODELS
@@ -44,10 +45,12 @@ def evaluate_evasion(
     names = model_names or all_names
 
     rows = []
-    for name in names:
+    print(f"\n[Evaluate] Evasion test on {len(names)} models  |  feature_set={feature_set}")
+    for name in tqdm(names, desc="Evaluating", unit="model", ncols=90):
         try:
             mdl = _load(name, feature_set, models_dir)
             if mdl is None:
+                tqdm.write(f"  [SKIP] {name} — no checkpoint")
                 _log.warning(f"[{name}] no checkpoint for {feature_set}, skipping")
                 continue
             yp_clean = mdl.predict(X_test_clean)
@@ -78,11 +81,16 @@ def evaluate_evasion(
                 "accuracy_drop": round(mc["accuracy"] - ma["accuracy"], 4),
                 "f1_drop": round(mc["f1"] - ma["f1"], 4),
             })
+            tqdm.write(
+                f"  {name:<22}  clean_ER={er_clean:.3f}  adv_ER={er_adv:.3f}  "
+                f"F1_drop={mc['f1'] - ma['f1']:+.3f}"
+            )
             _log.info(
                 f"[{name}] clean ER={er_clean:.3f} -> adv ER={er_adv:.3f} | "
                 f"F1 {mc['f1']:.3f} -> {ma['f1']:.3f}"
             )
         except Exception as e:
+            tqdm.write(f"  [ERROR] {name}: {e}")
             _log.exception(f"Eval failed for {name}: {e}")
 
     df = pd.DataFrame(rows)

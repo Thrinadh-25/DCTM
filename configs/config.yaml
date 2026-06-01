@@ -67,6 +67,8 @@ diffusion:
   grad_clip: 1.0
   partial_t_fraction: 0.5
   adv_samples_per_class: 5000
+  guidance_steps: 10    # PGD steps after diffusion; set 0 to disable
+  guidance_lr: 0.05     # step size for gradient ascent toward P(benign)
 
 classical:
   decision_tree:

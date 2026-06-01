@@ -43,7 +43,9 @@ pip install --upgrade torch --index-url https://download.pytorch.org/whl/cu121
 python -c "import torch; print('CUDA:', torch.cuda.is_available())"
 ```
 
-Raw CSVs go in `datasets/cicids2017/` and `datasets/cicids2018/`. All intermediate artifacts are written to `data/` (parquet caches, model checkpoints, adversarial samples). There is no automated test suite.
+Raw CSVs go in the paths configured in `config.yaml` — by default `datasets/cicids 2017/` (note the space) and `datasets/cicids2018csv/`. All intermediate artifacts are written to `data/` (parquet caches, model checkpoints, adversarial samples). There is no automated test suite.
+
+**Note:** `--phase preprocess` always processes **both** CICIDS2017 and CICIDS2018 regardless of the `--dataset` flag. The `--dataset` flag only affects the features/train/diffusion/attack/evaluate/retrain/report phases. Similarly, `--feature-set both` is only meaningful for `--phase train`; all downstream phases (diffusion, attack, evaluate, retrain) silently use `dctm` when `both` is passed.
 
 ## Architecture
 
@@ -56,7 +58,7 @@ Raw CSVs go in `datasets/cicids2017/` and `datasets/cicids2018/`. All intermedia
 ```
 Raw CSVs (datasets/)
   → preprocess → data/processed/*.parquet + data/splits/
-  → feature engineering → features_baseline.json (10 feats) + features_dctm.json (20 feats)
+  → feature engineering → configs/features_baseline.json (10 feats) + configs/features_dctm.json (20 feats)
   → SMOTE balancing (train only) → balanced splits
   → train 10 IDS models → data/models/{name}_{feature_set}.{pkl|pt}
   → diffusion training (per attack class) → data/models/diffusion_dctm_class{i}.pt
@@ -73,7 +75,7 @@ Two complementary selection methods are combined:
 - **SHAP Ranking:** LightGBM proxy trained on top-50k samples → SHAP explainer → feature scores
 - **Hybrid:** `0.5*MI + 0.5*SHAP` normalized → top-20 features (DCTM)
 
-Constraints (`constraints.py`) mark "immutable" columns (e.g., Destination Port, Flag Counts) — network-layer features that cannot realistically be altered by an attacker.
+Constraints (`feature_constraints.py`) mark "immutable" columns per dataset — hardcoded in `CICIDS2017_IMMUTABLE` / `CICIDS2018_IMMUTABLE`. For CICIDS2017: `Destination Port`, `URG Flag Count`, `CWE Flag Count`. For CICIDS2018: `Dst Port`, `PSH Flag Cnt`, `ACK Flag Cnt`. These are network-layer features that cannot realistically be altered by an attacker.
 
 ### IDS Models (`models/`)
 
@@ -95,14 +97,14 @@ One `TransformerDenoiser` is trained **per attack class** (not conditioned — s
 
 ### Evaluation (`evaluation/`)
 
-- `evasion_evaluator.py`: compares each model's performance on clean vs. adversarial test data; computes evasion rate (ER) against DEMGAN's 97.42% baseline
+- `evasion_evaluator.py`: compares each model's performance on clean vs. adversarial test data; computes evasion rate (ER = fraction of malicious samples misclassified as benign, label 0) against DEMGAN's 97.42% baseline
 - `retraining.py`: augments train set with adversarial samples and retrains all models
 - `report_generator.py`: summarizes best F1, most vulnerable model, retraining gains
 
 ## Key Configuration (`configs/config.yaml`)
 
 All hyperparameters are centralized here. Key tunable knobs:
-- `diffusion.T`: timesteps (default 1000)
+- `diffusion.timesteps`: number of diffusion steps (default 1000)
 - `diffusion.model_dim`: denoiser width (default 256)
 - `diffusion.batch_size`: lower if OOM on GPU
 - `feature_engineering.shap_sample_size` / `mi_sample_size`: reduce if memory is tight

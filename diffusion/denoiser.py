@@ -50,7 +50,8 @@ class TransformerDenoiser(nn.Module):
             nn.SiLU(),
             nn.Linear(model_dim, model_dim),
         )
-        self.input_proj = nn.Linear(n_features, model_dim)
+        # Each feature becomes its own token — enables real cross-feature attention
+        self.feature_proj = nn.Linear(1, model_dim)
 
         layer = nn.TransformerEncoderLayer(
             d_model=model_dim,
@@ -65,10 +66,10 @@ class TransformerDenoiser(nn.Module):
         self.output_proj = nn.Linear(model_dim, n_features)
 
     def forward(self, x_t: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
-        h = self.input_proj(x_t)          # (B, D)
-        te = self.time_mlp(t)              # (B, D)
-        h = h + te
-        h = h.unsqueeze(1)                 # (B, 1, D) — seq-len=1 token
-        h = self.encoder(h)
-        h = h.squeeze(1)
-        return self.output_proj(h)
+        # x_t: (B, F) — treat each feature as a separate token
+        h = self.feature_proj(x_t.unsqueeze(-1))  # (B, F, D)
+        te = self.time_mlp(t).unsqueeze(1)          # (B, 1, D) broadcast over F
+        h = h + te                                   # (B, F, D)
+        h = self.encoder(h)                          # (B, F, D) — real cross-feature attention
+        h = h.mean(dim=1)                            # (B, D) — pool over features
+        return self.output_proj(h)                   # (B, F)

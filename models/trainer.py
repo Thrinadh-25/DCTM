@@ -11,6 +11,7 @@ import time
 from pathlib import Path
 
 import numpy as np
+from tqdm import tqdm
 
 from models.classical import CLASSICAL_MODELS
 from models.deep_learning import DEEP_MODELS
@@ -70,12 +71,14 @@ def train_all_models(
     all_names = list(CLASSICAL_MODELS.keys()) + list(DEEP_MODELS.keys())
     names = include or all_names
 
-    for name in names:
+    print(f"\n[IDS Trainer] {len(names)} models  |  feature_set={feature_set}  |  n_train={X_train.shape[0]}")
+    for name in tqdm(names, desc="Models", unit="model", ncols=90):
         try:
             is_deep = name in DEEP_MODELS
             path = _model_path(models_dir, name, feature_set, is_deep)
 
             if os.path.exists(path):
+                tqdm.write(f"  [SKIP]  {name} — checkpoint exists")
                 _log.info(f"=== Skipping [{name}] ({feature_set}) — checkpoint exists at {path} ===")
                 if is_deep:
                     Cls = DEEP_MODELS[name]
@@ -90,6 +93,7 @@ def train_all_models(
                     model = _deep_ctor(name, input_dim, num_classes, deep_cfg)
                 else:
                     model = _classical_ctor(name, classical_cfg)
+                tqdm.write(f"\n  [TRAIN] {name} ({'deep' if is_deep else 'classical'}) ...")
                 _log.info(f"=== Training [{name}] ({feature_set}) ===")
                 model.train(X_train, y_train)
                 train_time = time.time() - t0
@@ -110,6 +114,11 @@ def train_all_models(
                 y_test, y_pred,
                 model_name=f"{name}_{feature_set}",
                 out_dir=cm_dir,
+            )
+            tqdm.write(
+                f"  [DONE]  {name:<20} "
+                f"acc={metrics['accuracy']:.4f}  f1={metrics['f1']:.4f}  "
+                f"time={metrics['train_time_sec']}s"
             )
             _log.info(f"[{name}] metrics={metrics}")
         except Exception as e:
