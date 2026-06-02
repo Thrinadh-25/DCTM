@@ -10,7 +10,9 @@
       "Bash(mv \"CSE-C-06.pptx\" \"ppt main/\")",
       "Bash(mv \"MiniProj-PPT-Instructions.pptx\" \"ppt main/\")",
       "Bash(mv \"CLAUDE_DESIGN_PPT.md\" \"ppt main/\")",
-      "Bash(mv \"SLIDE_CONTENT_GUIDE.md\" \"ppt main/\")"
+      "Bash(mv \"SLIDE_CONTENT_GUIDE.md\" \"ppt main/\")",
+      "mcp__claude_ai_Google_Drive__search_files",
+      "mcp__claude_ai_Google_Drive__download_file_content"
     ]
   }
 }

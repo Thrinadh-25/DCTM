@@ -132,6 +132,8 @@ classical:
     random_state: 42
     # SVM can be slow on huge data – subsample the training set
     max_train_samples: 50000
+    # SVM RBF prediction is O(n_sv * n_test) — subsample test set at eval time
+    max_eval_samples: 20000
 
 deep_learning:
   epochs: 30

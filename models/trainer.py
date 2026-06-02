@@ -98,20 +98,30 @@ def train_all_models(
                 model.train(X_train, y_train)
                 train_time = time.time() - t0
 
-            y_pred = model.predict(X_test)
+            # SVM RBF prediction is O(n_sv * n_test) — subsample test set to keep it fast
+            X_test_eval, y_test_eval = X_test, y_test
+            if name == "svm":
+                max_eval = classical_cfg.get("svm", {}).get("max_eval_samples", len(X_test))
+                if max_eval < len(X_test):
+                    rng = np.random.default_rng(42)
+                    idx = rng.choice(len(X_test), max_eval, replace=False)
+                    X_test_eval = X_test[idx]
+                    y_test_eval = y_test[idx]
+
+            y_pred = model.predict(X_test_eval)
             try:
-                y_proba = model.predict_proba(X_test)
+                y_proba = model.predict_proba(X_test_eval)
             except Exception:
                 y_proba = None
 
-            metrics = compute_metrics(y_test, y_pred, y_proba)
+            metrics = compute_metrics(y_test_eval, y_pred, y_proba)
             metrics["train_time_sec"] = round(train_time, 2)
             if train_time > 0:
                 model.save(path)
             results[name] = {"metrics": metrics, "path": path}
 
             plot_confusion_matrix(
-                y_test, y_pred,
+                y_test_eval, y_pred,
                 model_name=f"{name}_{feature_set}",
                 out_dir=cm_dir,
             )
