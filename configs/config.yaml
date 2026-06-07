@@ -10,34 +10,34 @@ project:
   seed: 42
 
 # ── LOCAL paths (default) ──────────────────────────────────────────────────────
-paths:
-  datasets:
-    cicids2017: "datasets/cicids 2017"
-    cicids2018: "datasets/cicids2018csv"
-  processed: "data/processed"
-  splits: "data/splits"
-  models: "data/models"
-  adversarial: "data/adversarial_no_pgd"
-  scaler: "data/scaler.pkl"
-  logs: "logs/run.log"
-  results: "evaluation/results_no_pgd"
-  visualization: "visualization"
-  configs: "configs"
-
-# ── COLAB paths (Google Drive — uncomment this block and comment out the block above) ──
 # paths:
 #   datasets:
-#     cicids2017: "/content/drive/MyDrive/DCTM/datasets/cicids 2017"
-#     cicids2018: "/content/drive/MyDrive/DCTM/datasets/cicids2018csv"
-#   processed:   "/content/drive/MyDrive/DCTM/data/processed"
-#   splits:      "/content/drive/MyDrive/DCTM/data/splits"
-#   models:      "/content/drive/MyDrive/DCTM/data/models"
-#   adversarial: "/content/drive/MyDrive/DCTM/data/adversarial"
-#   scaler:      "/content/drive/MyDrive/DCTM/data/scaler.pkl"
-#   logs:        "/content/drive/MyDrive/DCTM/logs/run.log"
-#   results:     "/content/drive/MyDrive/DCTM/evaluation/results"
-#   visualization: "/content/drive/MyDrive/DCTM/visualization"
-#   configs:     "/content/DCTM/configs"
+#     cicids2017: "datasets/cicids 2017"
+#     cicids2018: "datasets/cicids2018csv"
+#   processed: "data/processed"
+#   splits: "data/splits"
+#   models: "data/models"
+#   adversarial: "data/adversarial"
+#   scaler: "data/scaler.pkl"
+#   logs: "logs/run.log"
+#   results: "evaluation/results"
+#   visualization: "visualization"
+#   configs: "configs"
+
+# ── COLAB paths (Google Drive) ─────────────────────────────────────────────────
+paths:
+  datasets:
+    cicids2017: "/content/drive/MyDrive/DCTM/datasets/cicids 2017"
+    cicids2018: "/content/drive/MyDrive/DCTM/datasets/cicids2018csv"
+  processed:   "/content/drive/MyDrive/DCTM/data/processed"
+  splits:      "/content/drive/MyDrive/DCTM/data/splits"
+  models:      "/content/drive/MyDrive/DCTM/data/models"
+  adversarial: "/content/drive/MyDrive/DCTM/data/adversarial_no_pgd"
+  scaler:      "/content/drive/MyDrive/DCTM/data/scaler.pkl"
+  logs:        "/content/drive/MyDrive/DCTM/logs/run.log"
+  results:     "/content/drive/MyDrive/DCTM/evaluation/results_no_pgd"
+  visualization: "/content/drive/MyDrive/DCTM/visualization"
+  configs:     "/content/drive/MyDrive/DCTM/configs"
 # ───────────────────────────────────────────────────────────────────────────────
 
 preprocessing:
