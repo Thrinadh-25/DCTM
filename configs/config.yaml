@@ -17,10 +17,10 @@ paths:
   processed: "data/processed"
   splits: "data/splits"
   models: "data/models"
-  adversarial: "data/adversarial"
+  adversarial: "data/adversarial_no_pgd"
   scaler: "data/scaler.pkl"
   logs: "logs/run.log"
-  results: "evaluation/results"
+  results: "evaluation/results_no_pgd"
   visualization: "visualization"
   configs: "configs"
 
@@ -88,7 +88,7 @@ diffusion:
   grad_clip: 1.0
   partial_t_fraction: 0.5
   adv_samples_per_class: 5000
-  guidance_steps: 10    # PGD steps after diffusion; set 0 to disable
+  guidance_steps: 0     # PGD steps after diffusion; set 0 to disable
   guidance_lr: 0.05     # step size for gradient ascent toward P(benign)
 
 classical:
